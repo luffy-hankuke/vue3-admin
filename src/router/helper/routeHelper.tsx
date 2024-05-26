@@ -8,7 +8,10 @@ import basic from '@/router/routes/basic';
 import routeModules from '@/router/routes/modules';
 import { uniqueSlash } from '@/utils/urlUtils';
 
-export const transformMenuToRoutes = (routeList: RouteRecordRaw[]) => {
+export const transformMenuToRoutes = (
+  routeList: RouteRecordRaw[],
+  parentRoute?: RouteRecordRaw,
+) => {
   routeList.forEach((route) => {
     route.meta ||= {} as RouteMeta;
     const { show = 1, type, isExt, extOpenMode } = route.meta;
@@ -16,6 +19,14 @@ export const transformMenuToRoutes = (routeList: RouteRecordRaw[]) => {
 
     // 是否在菜单中隐藏
     route.meta.hideInMenu ??= !show;
+
+    // 规范化路由路径
+    route.path = route.path.startsWith('/') ? route.path : `/${route.path}`;
+    if (parentRoute?.path && !route.path.startsWith(parentRoute.path)) {
+      route.path = uniqueSlash(`${parentRoute.path}/${route.path}`);
+    }
+    // 以路由路径作为唯一的路由名称
+    route.name = route.path;
 
     if (type === 0) {
       route.component = null;
@@ -43,7 +54,7 @@ export const transformMenuToRoutes = (routeList: RouteRecordRaw[]) => {
     }
 
     if (route.children?.length) {
-      transformMenuToRoutes(route.children);
+      transformMenuToRoutes(route.children, route);
     }
   });
   return routeList;
@@ -55,6 +66,7 @@ export const generateDynamicRoutes = (menus: RouteRecordRaw[]) => {
   genNamePathForRoutes(allRoute);
   rootRoute.children = allRoute;
   router.addRoute(rootRoute);
+  console.log('routes', router.getRoutes());
   return routes;
 };
 
